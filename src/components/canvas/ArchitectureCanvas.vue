@@ -87,9 +87,6 @@ onConnect((params) => {
   ])
 })
 
-function removeEdge(id) {
-  edges.value = edges.value.filter((edge) => edge.id !== id)
-}
 </script>
 
 <template>

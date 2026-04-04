@@ -5,7 +5,7 @@ const props = defineProps<NodeProps<CustomData, CustomEvents>>()
 </script>
 
 <template>
-  <Handle :type="target" :position="Position.Left" />
+  <Handle type="target" :position="Position.Left" />
 
   <div
     class="px-4 py-3 rounded-lg border-2 shadow-md min-w-[140px] text-center"
@@ -19,7 +19,7 @@ const props = defineProps<NodeProps<CustomData, CustomEvents>>()
     </div>
   </div>
 
-  <Handle :type="source" :position="Position.Right" />
+  <Handle type="source" :position="Position.Right" />
 </template>
 
 <style scoped>
