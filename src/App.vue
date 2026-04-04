@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { RouterView } from 'vue-router'
 import { onMounted, ref } from 'vue'
 
 const apiResponse = ref(null);
@@ -11,7 +10,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <header>
+  <!--<header>
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
     <div class="wrapper">
@@ -22,11 +21,12 @@ onMounted(async () => {
         <RouterLink to="/about">About</RouterLink>
       </nav>
     </div>
-  </header>
+  </header>-->
 
-  <RouterView />
 
-  <p>
+  <RouterView class="w-full"/>
+
+  <!--<p>
     Response: {{ apiResponse }}
   </p>
 
@@ -39,7 +39,7 @@ onMounted(async () => {
   </div>
   <div class="chat chat-end">
     <div class="chat-bubble">You underestimate my power!</div>
-  </div>
+  </div>-->
 </template>
 
 <style scoped>
