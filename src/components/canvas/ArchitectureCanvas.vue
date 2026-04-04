@@ -2,12 +2,11 @@
 import { ref } from 'vue'
 import { markRaw } from 'vue'
 import { VueFlow, useVueFlow, type Node, type Edge } from '@vue-flow/core'
-import '@vue-flow/core/dist/style.css'
-import '@vue-flow/core/dist/theme-default.css'
 import MicroserviceNode from '@/components/canvas/nodes/MicroserviceNode.vue'
 import QueueNode from '@/components/canvas/nodes/QueueNode.vue'
 import TopicNode from '@/components/canvas/nodes/TopicNode.vue'
 import DatabaseNode from '@/components/canvas/nodes/DatabaseNode.vue'
+import { MiniMap } from '@vue-flow/minimap'
 
 const nodeTypes = {
   microservice: markRaw(MicroserviceNode),
@@ -100,7 +99,9 @@ function removeEdge(id) {
       :edges="initialEdges"
       :nodeTypes="nodeTypes"
       fit-view-on-init
-    />
+    >
+      <MiniMap />
+    </VueFlow>
 </template>
 
 <style>
