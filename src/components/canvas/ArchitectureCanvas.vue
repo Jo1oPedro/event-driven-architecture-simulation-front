@@ -9,6 +9,7 @@ import NodePalette from './toolbar/NodePalette.vue'
 import CanvasToolbar from './toolbar/CanvasToolbar.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
 import { NodeType } from '@/types/Topology.ts'
+import { useTopologyStore } from '@/stores/topology.ts'
 
 const nodeTypes = {
   microservice: markRaw(MicroserviceNode),
@@ -39,6 +40,14 @@ const {
   getEdges,
   screenToFlowCoordinate,
 } = useVueFlow('architecture-canvas')
+
+const topologyStore = useTopologyStore();
+
+function onSave() {
+  console.log('Nodes:', getNodes.value)
+  console.log('Edges:', getEdges.value)
+  topologyStore.save(getNodes.value, getEdges.value);
+}
 
 onConnect((params) => {
   addEdges([
@@ -84,12 +93,6 @@ function onDrop(event: DragEvent) {
 function onClear() {
   removeNodes(getNodes.value.map((n) => n.id))
   removeEdges(getEdges.value.map((e) => e.id))
-}
-
-function onSave() {
-  // Vai ser implementado na próxima fase com a API
-  console.log('Nodes:', getNodes.value)
-  console.log('Edges:', getEdges.value)
 }
 </script>
 
