@@ -18,6 +18,8 @@ const props = defineProps<NodeProps<CustomData, CustomEvents>>()
       {{ props.label }}
     </div>
   </div>
+
+  <Handle type="source" :position="Position.Right" />
 </template>
 
 <style scoped>
