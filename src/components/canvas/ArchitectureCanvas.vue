@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { markRaw } from 'vue'
 import { VueFlow, useVueFlow, type Node, type Edge } from '@vue-flow/core'
-import MicroserviceNode from '@/components/canvas/nodes/MicroserviceNode.vue'
-import QueueNode from '@/components/canvas/nodes/QueueNode.vue'
-import TopicNode from '@/components/canvas/nodes/TopicNode.vue'
-import DatabaseNode from '@/components/canvas/nodes/DatabaseNode.vue'
-import { MiniMap } from '@vue-flow/minimap'
+import MicroserviceNode from './nodes/MicroserviceNode.vue'
+import QueueNode from './nodes/QueueNode.vue'
+import TopicNode from './nodes/TopicNode.vue'
+import DatabaseNode from './nodes/DatabaseNode.vue'
+import NodePalette from './toolbar/NodePalette.vue'
+import CanvasToolbar from './toolbar/CanvasToolbar.vue'
+import PropertiesPanel from './PropertiesPanel.vue'
+import { NodeType } from '@/types/Topology.ts'
 
 const nodeTypes = {
   microservice: markRaw(MicroserviceNode),
@@ -15,96 +17,110 @@ const nodeTypes = {
   database: markRaw(DatabaseNode),
 }
 
-const initialNodes = ref<Node[]>([
-  {
-    id: 'node-1',
-    type: 'microservice',
-    label: 'API Gateway',
-    position: { x: 50, y: 200 },
-    data: {},
-  },
-  {
-    id: 'node-2',
-    type: 'queue',
-    label: 'Order Queue',
-    position: { x: 350, y: 200 },
-    data: {},
-  },
-  {
-    id: 'node-3',
-    type: 'microservice',
-    label: 'Order Service',
-    position: { x: 650, y: 200 },
-    data: {},
-  },
-  {
-    id: 'node-4',
-    type: 'topic',
-    label: 'order.created',
-    position: { x: 950, y: 200 },
-    data: {},
-  },
-  {
-    id: 'node-5',
-    type: 'microservice',
-    label: 'Payment Service',
-    position: { x: 1250, y: 100 },
-    data: {},
-  },
-  {
-    id: 'node-6',
-    type: 'microservice',
-    label: 'Notification Service',
-    position: { x: 1250, y: 300 },
-    data: {},
-  },
-  {
-    id: 'node-7',
-    type: 'database',
-    label: 'PostgreSQL Orders',
-    position: { x: 650, y: 400 },
-    data: {},
-  },
-]);
+const defaultLabels: Record<NodeType, string> = {
+  [NodeType.Microservice]: 'New Service',
+  [NodeType.Queue]: 'New Queue',
+  [NodeType.Topic]: 'New Topic',
+  [NodeType.Database]: 'New Database',
+}
 
-const initialEdges: Edge[] = [
-  { id: 'e1', source: 'node-1', target: 'node-2' },
-  { id: 'e2', source: 'node-2', target: 'node-3' },
-  { id: 'e3', source: 'node-3', target: 'node-4' },
-  { id: 'e4', source: 'node-3', target: 'node-7' },
-  { id: 'e5', source: 'node-4', target: 'node-5' },
-  { id: 'e6', source: 'node-4', target: 'node-6' },
-]
+const initialNodes: Node[] = []
+const initialEdges: Edge[] = []
 
-const { onConnect, addEdges } = useVueFlow('architecture-canvas')
+let nodeIdCounter = 0
+
+const {
+  onConnect,
+  addEdges,
+  addNodes,
+  removeNodes,
+  removeEdges,
+  getNodes,
+  getEdges,
+  screenToFlowCoordinate,
+} = useVueFlow('architecture-canvas')
 
 onConnect((params) => {
   addEdges([
     {
       ...params,
       id: `e-${params.source}-${params.target}`,
+      data: { simulatedLatency: 100, failureRate: 0 },
     },
   ])
 })
 
+function onDragOver(event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function onDrop(event: DragEvent) {
+  if (!event.dataTransfer) return
+
+  const nodeType = event.dataTransfer.getData('application/vueflow-node-type') as NodeType
+  if (!nodeType) return
+
+  const position = screenToFlowCoordinate({
+    x: event.clientX,
+    y: event.clientY,
+  })
+
+  const id = `node-${Date.now()}-${++nodeIdCounter}`
+
+  addNodes([
+    {
+      id,
+      type: nodeType,
+      label: defaultLabels[nodeType],
+      position,
+      data: {},
+    },
+  ])
+}
+
+function onClear() {
+  removeNodes(getNodes.value.map((n) => n.id))
+  removeEdges(getEdges.value.map((e) => e.id))
+}
+
+function onSave() {
+  // Vai ser implementado na próxima fase com a API
+  console.log('Nodes:', getNodes.value)
+  console.log('Edges:', getEdges.value)
+}
 </script>
 
 <template>
+  <div class="flex h-full w-full">
+    <div class="absolute top-4 left-4 z-10 bg-green-200">
+      <NodePalette />
+    </div>
+
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-red-200">
+      <CanvasToolbar @save="onSave" @clear="onClear" />
+    </div>
+
+    <div class="absolute top-4 right-4 z-10 bg-green-200">
+      <PropertiesPanel />
+    </div>
+
     <VueFlow
       id="architecture-canvas"
-      :nodes="initialNodes"
-      :edges="initialEdges"
-      :nodeTypes="nodeTypes"
+      :default-nodes="initialNodes"
+      :default-edges="initialEdges"
+      :node-types="nodeTypes"
+      :default-edge-options="{ selectable: true, deletable: true }"
       fit-view-on-init
-    >
-      <MiniMap />
-    </VueFlow>
+      @dragover="onDragOver"
+      @drop="onDrop"
+    />
+  </div>
 </template>
 
 <style>
-/* import the necessary styles for Vue Flow to work */
 @import '@vue-flow/core/dist/style.css';
-
-/* import the default theme, this is optional but generally recommended */
 @import '@vue-flow/core/dist/theme-default.css';
 </style>
