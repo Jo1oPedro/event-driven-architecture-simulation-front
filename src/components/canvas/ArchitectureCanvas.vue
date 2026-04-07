@@ -10,6 +10,7 @@ import CanvasToolbar from './toolbar/CanvasToolbar.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
 import { NodeType } from '@/types/Topology.ts'
 import { useTopologyStore } from '@/stores/topology.ts'
+import { useSimulationStore} from '@/stores/simulation.ts'
 
 const nodeTypes = {
   microservice: markRaw(MicroserviceNode),
@@ -94,6 +95,17 @@ function onClear() {
   removeNodes(getNodes.value.map((n) => n.id))
   removeEdges(getEdges.value.map((e) => e.id))
 }
+
+const simulationStore = useSimulationStore();
+async function onSimulate()  {
+  if(!topologyStore.currentTopologyId) return;
+  await simulationStore.start(topologyStore.currentTopologyId);
+}
+
+function isEdgeAnimating(edge: Edge): boolean {
+  const key = `${edge.source}-${edge.target}`;
+  return simulationStore.animatingEdges.has(key);
+}
 </script>
 
 <template>
@@ -103,7 +115,11 @@ function onClear() {
     </div>
 
     <div class="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-red-200">
-      <CanvasToolbar @save="onSave" @clear="onClear" />
+      <CanvasToolbar
+        @save="onSave"
+        @clear="onClear"
+        @simulate="onSimulate"
+      />
     </div>
 
     <div class="absolute top-4 right-4 z-10 bg-green-200">
@@ -119,11 +135,34 @@ function onClear() {
       fit-view-on-init
       @dragover="onDragOver"
       @drop="onDrop"
-    />
+    >
+      <template #edge-label="{ edge }">
+        <div
+          v-if="isEdgeAnimating(edge)"
+          class="pulse-dot"
+        />
+      </template>
+    </VueFlow>
   </div>
 </template>
 
 <style>
 @import '@vue-flow/core/dist/style.css';
 @import '@vue-flow/core/dist/theme-default.css';
+
+.vue-flow__edge.animated-edge path {
+  stroke: #22c55e;
+  stroke-width: 3;
+  animation: edge-pulse 0.6s ease-in-out;
+}
+
+.vue-flow__edge.animated-edge.failed path {
+  stroke: #ef4444;
+}
+
+@keyframes edge-pulse {
+  0% { stroke-opacity: 0.3; stroke-width: 2; }
+  50% { stroke-opacity: 1; stroke-width: 4; }
+  100% { stroke-opacity: 0.3; stroke-width: 2; }
+}
 </style>

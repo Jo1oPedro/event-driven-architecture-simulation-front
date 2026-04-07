@@ -1,12 +1,14 @@
 <script setup lang="ts">
-
 import { useTopologyStore } from '@/stores/topology.ts'
+import { useSimulationStore } from '@/stores/simulation.ts'
 
-const topologyStore = useTopologyStore();
+const topologyStore = useTopologyStore()
+const simulationStore = useSimulationStore()
 
 const emit = defineEmits<{
-  save: [],
+  save: []
   clear: []
+  simulate: []
 }>()
 </script>
 
@@ -24,15 +26,24 @@ const emit = defineEmits<{
     <button class="btn btn-sm btn-error btn-outline" @click="emit('clear')">
       Clear
     </button>
-    <button class="btn btn-sm btn-accent" disabled>
-      Simulate
+
+    <button
+      class="btn btn-sm btn-accent"
+      :disabled="
+        !topologyStore.currentTopologyId || simulationStore.isStarting || simulationStore.isRunning
+      "
+      @click="emit('simulate')"
+    >
+      {{ simulationStore.isStarting ? 'Starting...' : simulationStore.isRunning ? 'Running...' : 'Simulate' }}
     </button>
+
+    <span v-if="simulationStore.isRunning" class="badge badge-warning badge-sm">Running</span>
+    <span v-if="simulationStore.isCompleted" class="badge badge-success badge-sm">Completed</span>
+
     <span v-if="topologyStore.error" class="text-error text-xs">
       {{ topologyStore.error }}
     </span>
   </div>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>
