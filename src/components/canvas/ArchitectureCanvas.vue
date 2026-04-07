@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { markRaw } from 'vue'
+import { markRaw, watch } from 'vue'
 import { VueFlow, useVueFlow, type Node, type Edge } from '@vue-flow/core'
 import MicroserviceNode from './nodes/MicroserviceNode.vue'
 import QueueNode from './nodes/QueueNode.vue'
@@ -8,7 +8,7 @@ import DatabaseNode from './nodes/DatabaseNode.vue'
 import NodePalette from './toolbar/NodePalette.vue'
 import CanvasToolbar from './toolbar/CanvasToolbar.vue'
 import PropertiesPanel from './PropertiesPanel.vue'
-import { NodeType } from '@/types/Topology.ts'
+import { NodeType, type TopologyResponse } from '@/types/Topology.ts'
 import { useTopologyStore } from '@/stores/topology.ts'
 import { useSimulationStore} from '@/stores/simulation.ts'
 
@@ -37,6 +37,8 @@ const {
   addNodes,
   removeNodes,
   removeEdges,
+  setNodes,
+  setEdges,
   getNodes,
   getEdges,
   screenToFlowCoordinate,
@@ -44,10 +46,46 @@ const {
 
 const topologyStore = useTopologyStore();
 
-function onSave() {
-  console.log('Nodes:', getNodes.value)
-  console.log('Edges:', getEdges.value)
-  topologyStore.save(getNodes.value, getEdges.value);
+async function onSave() {
+  const response = await topologyStore.save(getNodes.value, getEdges.value)
+  if (!response) return
+
+  // Após salvar, sincroniza o canvas com os IDs do banco.
+  // O Mercure envia eventos com IDs do banco, então precisam bater.
+  syncCanvasWithResponse(response)
+}
+
+function syncCanvasWithResponse(response: TopologyResponse) {
+  setNodes(
+    response.nodes.map((node) => ({
+      id: String(node.id),
+      type: node.type,
+      label: node.label,
+      position: { x: node.positionX, y: node.positionY },
+      data: { config: node.config },
+    })),
+  )
+
+  setEdges(
+    response.edges.map((edge) => ({
+      id: String(edge.id),
+      source: String(edge.sourceNodeId),
+      target: String(edge.targetNodeId),
+      data: {
+        simulatedLatency: edge.simulatedLatency,
+        failureRate: edge.failureRate,
+      },
+    })),
+  )
+}
+
+// Carrega uma topologia salva no canvas
+async function loadTopology(id: number) {
+  const result = await topologyStore.load(id)
+  if (!result) return
+
+  setNodes(result.nodes)
+  setEdges(result.edges)
 }
 
 onConnect((params) => {
@@ -102,10 +140,31 @@ async function onSimulate()  {
   await simulationStore.start(topologyStore.currentTopologyId);
 }
 
-function isEdgeAnimating(edge: Edge): boolean {
-  const key = `${edge.source}-${edge.target}`;
-  return simulationStore.animatingEdges.has(key);
-}
+// Expõe para o componente pai poder carregar topologias
+defineExpose({ loadTopology })
+
+// Observa mudanças no animatingEdges e atualiza o estilo das edges no Vue Flow
+watch(
+  () => simulationStore.animatingEdges,
+  (animating) => {
+    for (const edge of getEdges.value) {
+      const key = `${edge.source}-${edge.target}`
+      if (key in animating) {
+        const status = animating[key]
+        const color = status === 'failed' ? '#ef4444' : status === 'sent' ? '#f59e0b' : '#22c55e'
+        edge.style = {
+          stroke: color,
+          strokeWidth: 3,
+        }
+        edge.animated = true
+      } else {
+        edge.style = {}
+        edge.animated = false
+      }
+    }
+  },
+  { deep: true },
+)
 </script>
 
 <template>
@@ -135,14 +194,7 @@ function isEdgeAnimating(edge: Edge): boolean {
       fit-view-on-init
       @dragover="onDragOver"
       @drop="onDrop"
-    >
-      <template #edge-label="{ edge }">
-        <div
-          v-if="isEdgeAnimating(edge)"
-          class="pulse-dot"
-        />
-      </template>
-    </VueFlow>
+    />
   </div>
 </template>
 

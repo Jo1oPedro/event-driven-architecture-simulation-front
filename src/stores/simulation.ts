@@ -14,8 +14,8 @@ export const useSimulationStore = defineStore('simulation', () => {
   const isStarting = ref(false)
   const error = ref<string | null>(null)
 
-  // Edges que estão animando ("sourceNodeId-targetNodeId")
-  const animatingEdges = ref<Set<string>>(new Set())
+  // Edges que estão animando — Map<"sourceNodeId-targetNodeId", status>
+  const animatingEdges = ref<Record<string, string>>({})
 
   // Conexões Mercure
   let eventsMercure: ReturnType<typeof useMercure<SimulationEventResponse>> | null = null
@@ -41,7 +41,12 @@ export const useSimulationStore = defineStore('simulation', () => {
       for (const event of existingEvents) {
         if (!events.value.find((e) => e.id === event.id)) {
           events.value.push(event)
-          animateEdge(event)
+          // Anima edges de eventos que já foram processados
+          const edgeKey = `${event.sourceNodeId}-${event.targetNodeId}`
+          animatingEdges.value[edgeKey] = event.status
+          setTimeout(() => {
+            delete animatingEdges.value[edgeKey]
+          }, 1500)
         }
       }
 
@@ -85,9 +90,19 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventsMercure = useMercure<SimulationEventResponse>(
       `simulation/${simulationId}/events`,
       (event) => {
-        if (!events.value.find((e) => e.id === event.id)) {
+        const edgeKey = `${event.sourceNodeId}-${event.targetNodeId}`
+
+        if (event.status === 'sent') {
+          // Mensagem começou a viajar — anima a edge pela duração da latência
+          animatingEdges.value[edgeKey] = 'sent'
+        } else {
+          // delivered ou failed — atualiza o status e remove após 1.5s
+          animatingEdges.value[edgeKey] = event.status
           events.value.push(event)
-          animateEdge(event)
+
+          setTimeout(() => {
+            delete animatingEdges.value[edgeKey]
+          }, 1500)
         }
       },
     )
@@ -113,14 +128,8 @@ export const useSimulationStore = defineStore('simulation', () => {
     statusMercure.connect()
   }
 
-  function animateEdge(event: SimulationEventResponse) {
-    const edgeKey = `${event.sourceNodeId}-${event.targetNodeId}`
-    animatingEdges.value.add(edgeKey)
-
-    setTimeout(() => {
-      animatingEdges.value.delete(edgeKey)
-    }, 1000)
-  }
+  // animateEdge removido — a lógica agora está no callback do Mercure
+  // "sent" anima indefinidamente, "delivered/failed" remove após 1.5s
 
   function disconnect() {
     eventsMercure?.disconnect()
@@ -133,7 +142,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     disconnect()
     simulation.value = null
     events.value = []
-    animatingEdges.value.clear()
+    animatingEdges.value = {}
     error.value = null
   }
 
