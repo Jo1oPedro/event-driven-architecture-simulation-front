@@ -6,7 +6,6 @@ const {
   getSelectedNodes,
   getSelectedEdges,
   updateNode,
-  updateEdge
 } =
   useVueFlow('architecture-canvas')
 
@@ -32,24 +31,16 @@ function onNodeLabelChange(event: Event) {
 function onEdgeLatencyChange(event: Event) {
   const target = event.target as HTMLInputElement
   if (selectedEdge.value) {
-    updateEdge(selectedEdge.value.id, {
-      data: {
-        ...selectedEdge.value.data,
-        simulatedLatency: parseInt(target.value) || 0,
-      },
-    })
+    if (!selectedEdge.value.data) selectedEdge.value.data = {}
+    selectedEdge.value.data.simulatedLatency = parseInt(target.value) || 0
   }
 }
 
 function onEdgeFailureRateChange(event: Event) {
   const target = event.target as HTMLInputElement
   if (selectedEdge.value) {
-    updateEdge(selectedEdge.value.id, {
-      data: {
-        ...selectedEdge.value.data,
-        failureRate: parseFloat(target.value) || 0,
-      },
-    })
+    if (!selectedEdge.value.data) selectedEdge.value.data = {}
+    selectedEdge.value.data.failureRate = parseFloat(target.value) || 0
   }
 }
 </script>
